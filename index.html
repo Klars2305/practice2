@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f7f2" />
+    <title>Campus Snack Bar | Point of Sale</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#main" aria-label="Campus Snack Bar home">
+        <span class="brand-mark" aria-hidden="true">SB</span>
+        <span>Campus Snack Bar</span>
+      </a>
+      <span class="service-label"><span class="status-dot" aria-hidden="true"></span> Counter service</span>
+    </header>
+
+    <main id="main" class="page-shell">
+      <section class="welcome" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">POINT OF SALE</p>
+          <h1 id="page-title">Good day. What would you like?</h1>
+          <p class="welcome-copy">Choose from today’s snack bar favorites.</p>
+        </div>
+        <div class="order-number" aria-label="New order">
+          <span class="order-number-label">CURRENT ORDER</span>
+          <strong>New</strong>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="catalog" aria-labelledby="catalog-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">THE MENU</p>
+              <h2 id="catalog-title">Popular picks</h2>
+            </div>
+            <span class="item-count" id="product-count"></span>
+          </div>
+          <div class="product-grid" id="product-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="order-panel" aria-labelledby="order-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">YOUR ORDER</p>
+              <h2 id="order-title">Order summary</h2>
+            </div>
+            <span class="bag-icon" aria-hidden="true">＋</span>
+          </div>
+
+          <div class="empty-order" id="empty-order">
+            <span class="empty-icon" aria-hidden="true">⌑</span>
+            <p class="empty-title">Your order is empty</p>
+            <p class="empty-copy">Add an item from the menu to get started.</p>
+          </div>
+
+          <div class="order-lines" id="order-lines" aria-live="polite" hidden></div>
+
+          <div class="summary-total">
+            <span>Total</span>
+            <strong id="order-total" aria-live="polite">₱0.00</strong>
+          </div>
+
+          <form class="payment-form" aria-label="Cash payment">
+            <label for="cash-amount">Cash received</label>
+            <div class="cash-input-wrap">
+              <span aria-hidden="true">₱</span>
+              <input id="cash-amount" name="cash-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" disabled />
+            </div>
+            <button class="pay-button" type="button" disabled>Charge customer <span aria-hidden="true">→</span></button>
+            <p class="stage-note">Cash checkout will be available in the next stage.</p>
+          </form>
+        </aside>
+      </div>
+
+      <footer class="page-footer">
+        <span>Campus Snack Bar</span>
+        <span>Fresh snacks, ready for your break.</span>
+      </footer>
+    </main>
+  </body>
+</html>
