@@ -1,35 +1,30 @@
 # Campus Snack Bar POS
 
-A small desktop-friendly point-of-sale app for the IT 415 Campus Snack Bar scenario.
+A desktop friendly point of sale app for the IT 415 Campus Snack Bar practical exam.
 
-## Current milestone: Stage 2 — ordering and calculations
+## Current milestone: Stage 3 — validation and final improvements
 
-The menu includes six hard-coded products and prices. Add buttons update an in-memory cart; quantity controls change or remove a line, and each line subtotal and order total recalculate after every change. Decreasing a line from quantity one removes it. Cash payment, payment validation, receipts, and transaction reset are planned for the next stage.
+The app supports the six hard-coded products, an in-memory cart, quantity controls, cash validation, change calculation, payment confirmation, a digital receipt, and a new transaction reset. Amounts are calculated in integer centavos.
 
 ## Run
 
-Open `index.html` in a current desktop browser. No package installation or server is required.
+Open `index.html` in a current desktop browser. No package installation, server, or build step is required.
 
 ## Files
 
 - `index.html` — page structure and accessible controls
-- `styles.css` — responsive desktop-friendly layout and visual styling
-- `app.js` — hard-coded product catalog, in-memory cart, rendering, and centavo-based calculations
+- `styles.css` — responsive desktop friendly layout and receipt styling
+- `app.js` — hard-coded products, in-memory cart, payment flow, validation, and calculations
 
 ## Technology
 
-This project uses plain HTML, CSS, and JavaScript, as specified for this milestone. It has no package installation or build step.
+Plain HTML, CSS, and JavaScript. No database, login, inventory system, payment gateway, or deployment setup is used.
 
-## Next stage
+## Manual checks
 
-Validation and final improvements: validate cash, calculate change, show confirmation and a receipt, support a new transaction, then review and document the finished app.
-
-## Manual check for Stage 2
-
-1. Open `index.html` in a desktop browser.
-2. Add Classic Burger twice; confirm quantity is 2, subtotal is ₱110.00, and total is ₱110.00.
-3. Add Fries and Soda; confirm their subtotals and the total of ₱180.00.
-4. Increase and decrease a line; confirm quantity, subtotal, and total update each time.
-5. Decrease any one-quantity line once; confirm the line is removed. Use Remove on another line and confirm the total updates.
-6. Remove all lines; confirm the empty-cart message returns and total is ₱0.00.
-7. Resize to a narrower window and tab through menu/cart controls. Cash checkout remains disabled until the next stage.
+1. Open `index.html`; confirm the six listed products and prices appear.
+2. Add a Classic Burger twice and Soda once; confirm quantities, subtotals, and total of ₱135.00.
+3. Try submitting with a blank amount, letters (such as `abc`), a negative amount (such as `-1`), and insufficient cash (such as `100`). Confirm each shows a clear message and does not complete the sale.
+4. Enter `150`; confirm payment is accepted, change is ₱15.00, and the receipt shows products, quantities, subtotals, total, amount paid, change, and a transaction reference.
+5. Confirm product/cart controls and payment are locked after checkout. Select **Start new transaction**; confirm cart, payment, receipt, and reference clear and controls are available again.
+6. Resize the browser to a narrow window and use Tab/Enter to check keyboard access to the controls.

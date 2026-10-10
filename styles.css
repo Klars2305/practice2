@@ -165,7 +165,21 @@ h2 { margin-bottom: 0; font-size: 19px; font-weight: 800; letter-spacing: -.55px
 .pay-button { min-height: 43px; margin-top: 3px; padding: 0 14px; background: var(--green); color: white; font-size: 12px; }
 .pay-button:disabled { cursor: not-allowed; opacity: .58; }
 .pay-button span { margin-left: auto; font-size: 17px; font-weight: 400; }
-.stage-note { margin: 1px 0 0; color: #9a9f98; font-size: 10px; text-align: center; }
+.payment-message { min-height: 0; margin: 0; color: #9b4034; font-size: 11px; line-height: 1.5; }
+.payment-message:empty { display: none; }
+.payment-message.success { color: var(--green); }
+.receipt { margin-top: 17px; padding: 15px; border: 1px solid #dce8dc; border-radius: 10px; background: #f8fbf7; }
+.receipt-title { margin: 0 0 5px; color: var(--green); font-size: 15px; }
+.receipt-confirmation { margin: 0 0 8px; color: #546456; font-size: 11px; }
+.receipt-reference { margin: 0 0 12px; color: #737d73; font-size: 10px; overflow-wrap: anywhere; }
+.receipt-lines, .receipt-totals { display: grid; gap: 8px; }
+.receipt-lines { padding-bottom: 11px; border-bottom: 1px solid #e3e9e1; }
+.receipt-totals { padding-top: 10px; }
+.receipt-line { display: flex; justify-content: space-between; gap: 10px; color: #626b62; font-size: 10px; }
+.receipt-line strong { flex: 0 0 auto; color: var(--ink); }
+.new-transaction-button { width: 100%; min-height: 40px; margin-top: 10px; border: 1px solid #dfe7df; border-radius: 8px; background: #edf3ed; color: var(--green); font-size: 11px; font-weight: 700; cursor: pointer; }
+.new-transaction-button:hover { background: #e3eee4; }
+.add-button:disabled, .quantity-button:disabled, .remove-button:disabled { cursor: not-allowed; opacity: .55; }
 .page-footer { display: flex; justify-content: space-between; padding: 25px 2px 30px; color: #92988f; font-size: 10px; }
 
 :focus-visible { outline: 3px solid #9cb7a2; outline-offset: 3px; }

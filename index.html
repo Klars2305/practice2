@@ -64,15 +64,17 @@
             <strong id="order-total" aria-live="polite">₱0.00</strong>
           </div>
 
-          <form class="payment-form" aria-label="Cash payment">
+          <form class="payment-form" id="payment-form" aria-label="Cash payment" novalidate>
             <label for="cash-amount">Cash received</label>
             <div class="cash-input-wrap">
               <span aria-hidden="true">₱</span>
-              <input id="cash-amount" name="cash-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" disabled />
+              <input id="cash-amount" name="cash-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" disabled aria-describedby="payment-message" />
             </div>
-            <button class="pay-button" type="button" disabled>Charge customer <span aria-hidden="true">→</span></button>
-            <p class="stage-note">Cash checkout will be available in the next stage.</p>
+            <button class="pay-button" id="pay-button" type="submit" disabled>Confirm payment <span aria-hidden="true">→</span></button>
+            <p class="payment-message" id="payment-message" role="alert" aria-live="polite"></p>
           </form>
+          <section class="receipt" id="receipt" aria-live="polite" hidden></section>
+          <button class="new-transaction-button" id="new-transaction" type="button" hidden>Start new transaction</button>
         </aside>
       </div>
 
