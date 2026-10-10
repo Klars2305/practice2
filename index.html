@@ -39,7 +39,7 @@
             </div>
             <span class="item-count" id="product-count"></span>
           </div>
-          <div class="product-grid" id="product-grid" aria-live="polite"></div>
+          <div class="product-grid" id="product-grid" role="list" aria-label="Available snack bar products"></div>
         </section>
 
         <aside class="order-panel" aria-labelledby="order-title">
@@ -71,7 +71,7 @@
               <input id="cash-amount" name="cash-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" disabled aria-describedby="payment-message" />
             </div>
             <button class="pay-button" id="pay-button" type="submit" disabled>Confirm payment <span aria-hidden="true">→</span></button>
-            <p class="payment-message" id="payment-message" role="alert" aria-live="polite"></p>
+            <p class="payment-message" id="payment-message" role="alert"></p>
           </form>
           <button class="new-transaction-button" id="new-transaction" type="button" hidden>Start new transaction</button>
         </aside>

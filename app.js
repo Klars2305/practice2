@@ -1,5 +1,9 @@
-// The menu, cart, and completed transaction stay in memory for this browser session.
-// Prices use integer centavos so calculations remain exact.
+// Campus Snack Bar POS
+// Product prices and transaction amounts use integer centavos for exact totals.
+
+// -----------------------------------------------------------------------------
+// Product data and local icon paths
+// -----------------------------------------------------------------------------
 const products = [
   { id: "classic-burger", name: "Classic Burger", category: "BURGERS", price: 5500, icon: "burger", tone: "peach" },
   { id: "cheeseburger", name: "Cheeseburger", category: "BURGERS", price: 6500, icon: "cheeseburger", tone: "gold" },
@@ -9,7 +13,9 @@ const products = [
   { id: "soda-can", name: "Soda (Can)", category: "DRINKS", price: 2500, icon: "soda", tone: "blue" },
 ];
 
-// Local, Lucide-style SVGs keep familiar icons available without a network dependency.
+const productById = new Map(products.map((product) => [product.id, product]));
+
+// Inline Lucide-style SVG path data keeps icons available without network assets.
 const iconShapes = {
   burger: '<path d="M4 11a8 6 0 0 1 16 0"/><path d="M3.5 12h17l-1 3h-15l-1-3Z"/><path d="M5 16h14l-1 4H6l-1-4Z"/><path d="M8 8h.01M12 6.8h.01M16 8h.01"/>',
   cheeseburger: '<path d="M4 11a8 6 0 0 1 16 0"/><path d="M3.5 12h17l-1 3h-15l-1-3Z"/><path d="m7 15 3 4 2-2 2 2 3-4"/><path d="M8 8h.01M12 6.8h.01M16 8h.01"/>',
@@ -25,6 +31,56 @@ const iconShapes = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
   basket: '<path d="m3 10 2 11h14l2-11H3Z"/><path d="m7 10 5-7 5 7M8 14v3m4-3v3m4-3v3"/>',
 };
+
+// -----------------------------------------------------------------------------
+// DOM references and in-memory transaction state
+// -----------------------------------------------------------------------------
+const elements = {
+  productGrid: document.querySelector("#product-grid"),
+  productCount: document.querySelector("#product-count"),
+  orderLines: document.querySelector("#order-lines"),
+  emptyOrder: document.querySelector("#empty-order"),
+  orderTotal: document.querySelector("#order-total"),
+  paymentForm: document.querySelector("#payment-form"),
+  cashAmount: document.querySelector("#cash-amount"),
+  payButton: document.querySelector("#pay-button"),
+  paymentMessage: document.querySelector("#payment-message"),
+  receipt: document.querySelector("#receipt"),
+  newTransactionButton: document.querySelector("#new-transaction"),
+  orderNumber: document.querySelector(".order-number strong"),
+  paymentConfirmModal: document.querySelector("#payment-confirm-modal"),
+  paymentConfirmDetails: document.querySelector("#payment-confirm-details"),
+  insufficientModal: document.querySelector("#insufficient-modal"),
+  insufficientDetails: document.querySelector("#insufficient-details"),
+  removeConfirmModal: document.querySelector("#remove-confirm-modal"),
+  removeConfirmDetails: document.querySelector("#remove-confirm-details"),
+  newTransactionModal: document.querySelector("#new-transaction-modal"),
+  receiptModal: document.querySelector("#receipt-modal"),
+  acceptPayment: document.querySelector("#accept-payment"),
+  confirmRemove: document.querySelector("#confirm-remove"),
+  closeReceipt: document.querySelector("#close-receipt"),
+  receiptNewTransaction: document.querySelector("#receipt-new-transaction"),
+  confirmNewTransaction: document.querySelector("#confirm-new-transaction"),
+  welcomeCopy: document.querySelector(".welcome-copy"),
+  cashCurrency: document.querySelector(".cash-input-wrap > span"),
+  bagIcon: document.querySelector(".bag-icon"),
+  emptyIcon: document.querySelector(".empty-icon"),
+};
+
+const cart = new Map();
+const transactionState = {
+  count: 0,
+  completed: null,
+  pendingPayment: null,
+  pendingRemovalId: null,
+};
+
+// -----------------------------------------------------------------------------
+// Reusable formatting, icon, and calculation helpers
+// -----------------------------------------------------------------------------
+function formatPesos(amountInCentavos) {
+  return `\u20B1${(amountInCentavos / 100).toFixed(2)}`;
+}
 
 function createIcon(name, size = 20) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -42,50 +98,51 @@ function createIcon(name, size = 20) {
   return svg;
 }
 
-const productGrid = document.querySelector("#product-grid");
-const productCount = document.querySelector("#product-count");
-const orderLines = document.querySelector("#order-lines");
-const emptyOrder = document.querySelector("#empty-order");
-const orderTotal = document.querySelector("#order-total");
-const paymentForm = document.querySelector("#payment-form");
-const cashAmount = document.querySelector("#cash-amount");
-const payButton = document.querySelector("#pay-button");
-const paymentMessage = document.querySelector("#payment-message");
-const receipt = document.querySelector("#receipt");
-const newTransactionButton = document.querySelector("#new-transaction");
-const orderNumber = document.querySelector(".order-number strong");
-const paymentConfirmModal = document.querySelector("#payment-confirm-modal");
-const paymentConfirmDetails = document.querySelector("#payment-confirm-details");
-const insufficientModal = document.querySelector("#insufficient-modal");
-const insufficientDetails = document.querySelector("#insufficient-details");
-const removeConfirmModal = document.querySelector("#remove-confirm-modal");
-const removeConfirmDetails = document.querySelector("#remove-confirm-details");
-const newTransactionModal = document.querySelector("#new-transaction-modal");
-const receiptModal = document.querySelector("#receipt-modal");
-document.querySelector(".welcome-copy").textContent = "Choose from today's snack bar favorites.";
-document.querySelector(".cash-input-wrap > span").textContent = "\u20B1";
-document.querySelector(".bag-icon").replaceChildren(createIcon("basket", 18));
-document.querySelector(".empty-icon").replaceChildren(createIcon("cart", 23));
-payButton.querySelector("span").replaceChildren(createIcon("arrow", 17));
-let pendingRemoval = null;
-let pendingPayment = null;
-const cart = new Map();
-let transactionCount = 0;
-let completedTransaction = null;
-
-function formatPesos(amountInCentavos) {
-  return `\u20B1${(amountInCentavos / 100).toFixed(2)}`;
+function getCartTotal() {
+  let total = 0;
+  for (const [productId, quantity] of cart) {
+    const product = productById.get(productId);
+    if (product) total += product.price * quantity;
+  }
+  return total;
 }
 
-function renderProducts() {
-  productCount.textContent = `${products.length} ITEMS`;
+function validatePayment(rawAmount) {
+  const entered = rawAmount.trim();
+  if (cart.size === 0) return { valid: false, type: "empty", message: "Add at least one item before accepting payment." };
+  if (!entered) return { valid: false, type: "input", message: "Enter the cash amount received." };
+  if (/^-/.test(entered)) return { valid: false, type: "input", message: "Cash received cannot be negative." };
+  if (!/^\d+(\.\d{1,2})?$/.test(entered)) {
+    return { valid: false, type: "input", message: "Enter a valid amount using numbers and up to two decimal places." };
+  }
+
+  const paid = Math.round(Number(entered) * 100);
+  if (!Number.isSafeInteger(paid)) {
+    return { valid: false, type: "input", message: "Enter a valid cash amount." };
+  }
+
+  const total = getCartTotal();
+  if (paid < total) return { valid: false, type: "insufficient", paid, total };
+  return { valid: true, paid, total };
+}
+
+// -----------------------------------------------------------------------------
+// Rendering: product catalog, order summary, and digital receipt
+// -----------------------------------------------------------------------------
+function renderProductCatalog() {
+  elements.productCount.textContent = `${products.length} ITEMS`;
+  const fragment = document.createDocumentFragment();
+
   for (const product of products) {
     const card = document.createElement("article");
     card.className = "product-card";
+    card.setAttribute("role", "listitem");
+
     const visual = document.createElement("div");
     visual.className = `product-visual ${product.tone}`;
     visual.setAttribute("aria-hidden", "true");
     visual.append(createIcon(product.icon, 54));
+
     const details = document.createElement("div");
     details.className = "product-details";
     const category = document.createElement("p");
@@ -94,6 +151,7 @@ function renderProducts() {
     const name = document.createElement("h3");
     name.className = "product-name";
     name.textContent = product.name;
+
     const bottom = document.createElement("div");
     bottom.className = "product-bottom";
     const price = document.createElement("strong");
@@ -105,15 +163,15 @@ function renderProducts() {
     addButton.dataset.action = "add";
     addButton.dataset.productId = product.id;
     addButton.setAttribute("aria-label", `Add ${product.name} to order`);
-    addButton.disabled = Boolean(completedTransaction);
-    const plus = createIcon("plus", 15);
-    plus.classList.add("button-icon");
-    addButton.append(plus, document.createTextNode(" Add"));
+    addButton.append(createIcon("plus", 15), document.createTextNode(" Add"));
+
     bottom.append(price, addButton);
     details.append(category, name, bottom);
     card.append(visual, details);
-    productGrid.append(card);
+    fragment.append(card);
   }
+
+  elements.productGrid.replaceChildren(fragment);
 }
 
 function createCartButton(action, label, product) {
@@ -123,29 +181,22 @@ function createCartButton(action, label, product) {
   button.dataset.action = action;
   button.dataset.productId = product.id;
   button.setAttribute("aria-label", label);
+
   if (action === "remove") {
     button.append(createIcon("trash", 14), document.createTextNode(" Remove"));
   } else {
     button.append(createIcon(action === "increase" ? "plus" : "minus", 15));
   }
-  button.disabled = Boolean(completedTransaction);
   return button;
 }
 
-function getTotal() {
-  let total = 0;
-  for (const [productId, quantity] of cart) {
-    const product = products.find((item) => item.id === productId);
-    if (product) total += product.price * quantity;
-  }
-  return total;
-}
-
 function renderCart() {
-  orderLines.replaceChildren();
+  const fragment = document.createDocumentFragment();
+
   for (const [productId, quantity] of cart) {
-    const product = products.find((item) => item.id === productId);
+    const product = productById.get(productId);
     if (!product) continue;
+
     const row = document.createElement("article");
     row.className = "cart-row";
     const top = document.createElement("div");
@@ -153,10 +204,11 @@ function renderCart() {
     const name = document.createElement("h3");
     name.className = "cart-product-name";
     name.textContent = product.name;
-    const amount = document.createElement("strong");
-    amount.className = "cart-subtotal";
-    amount.textContent = formatPesos(product.price * quantity);
-    top.append(name, amount);
+    const subtotal = document.createElement("strong");
+    subtotal.className = "cart-subtotal";
+    subtotal.textContent = formatPesos(product.price * quantity);
+    top.append(name, subtotal);
+
     const bottom = document.createElement("div");
     bottom.className = "cart-row-bottom";
     const controls = document.createElement("div");
@@ -169,196 +221,238 @@ function renderCart() {
     controls.append(quantityLabel, createCartButton("increase", `Increase ${product.name} quantity`, product));
     bottom.append(controls, createCartButton("remove", `Remove ${product.name} from order`, product));
     row.append(top, bottom);
-    orderLines.append(row);
+    fragment.append(row);
   }
-  emptyOrder.hidden = cart.size > 0;
-  orderLines.hidden = cart.size === 0;
-  orderTotal.textContent = formatPesos(getTotal());
-  cashAmount.disabled = cart.size === 0 || Boolean(completedTransaction);
-  payButton.disabled = cart.size === 0 || Boolean(completedTransaction);
+
+  elements.orderLines.replaceChildren(fragment);
+  const total = getCartTotal();
+  elements.emptyOrder.hidden = cart.size > 0;
+  elements.orderLines.hidden = cart.size === 0;
+  elements.orderTotal.textContent = formatPesos(total);
+  elements.cashAmount.disabled = cart.size === 0 || Boolean(transactionState.completed);
+  elements.payButton.disabled = cart.size === 0 || Boolean(transactionState.completed);
 }
 
-function clearPaymentMessage() {
-  paymentMessage.textContent = "";
-  paymentMessage.className = "payment-message";
+function appendReceiptLine(parent, label, amount) {
+  const line = document.createElement("div");
+  line.className = "receipt-line";
+  const description = document.createElement("span");
+  description.textContent = label;
+  const value = document.createElement("strong");
+  value.textContent = formatPesos(amount);
+  line.append(description, value);
+  parent.append(line);
 }
 
 function renderReceipt(transaction) {
-  receipt.replaceChildren();
   const heading = document.createElement("h3");
-  heading.textContent = "Payment confirmed";
   heading.className = "receipt-title";
+  heading.textContent = "Payment confirmed";
+  const confirmation = document.createElement("p");
+  confirmation.className = "receipt-confirmation";
+  confirmation.textContent = "Thank you! Your order is paid.";
   const reference = document.createElement("p");
   reference.className = "receipt-reference";
   reference.textContent = `Transaction reference: ${transaction.reference}`;
-  const message = document.createElement("p");
-  message.className = "receipt-confirmation";
-  message.textContent = "Thank you! Your order is paid.";
+
   const lines = document.createElement("div");
   lines.className = "receipt-lines";
   for (const item of transaction.items) {
-    const line = document.createElement("div");
-    line.className = "receipt-line";
-    const description = document.createElement("span");
-    description.textContent = `${item.name} × ${item.quantity}`;
-    const subtotal = document.createElement("strong");
-    subtotal.textContent = formatPesos(item.subtotal);
-    line.append(description, subtotal);
-    lines.append(line);
+    appendReceiptLine(lines, `${item.name} × ${item.quantity}`, item.subtotal);
   }
+
   const totals = document.createElement("div");
   totals.className = "receipt-totals";
-  for (const [label, amount] of [["Total", transaction.total], ["Amount paid", transaction.paid], ["Change", transaction.change]]) {
-    const line = document.createElement("div");
-    line.className = "receipt-line";
-    const term = document.createElement("span");
-    term.textContent = label;
-    const value = document.createElement("strong");
-    value.textContent = formatPesos(amount);
-    line.append(term, value);
-    totals.append(line);
-  }
-  receipt.append(heading, message, reference, lines, totals);
-  receiptModal.showModal();
+  appendReceiptLine(totals, "Total", transaction.total);
+  appendReceiptLine(totals, "Amount paid", transaction.paid);
+  appendReceiptLine(totals, "Change", transaction.change);
+
+  elements.receipt.replaceChildren(heading, confirmation, reference, lines, totals);
+  elements.receiptModal.showModal();
 }
 
-productGrid.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-action='add']");
-  if (!button || completedTransaction) return;
-  const currentQuantity = cart.get(button.dataset.productId) || 0;
-  cart.set(button.dataset.productId, currentQuantity + 1);
-  cashAmount.value = "";
-  clearPaymentMessage();
-  renderCart();
-});
+// -----------------------------------------------------------------------------
+// Transaction and payment actions
+// -----------------------------------------------------------------------------
+function clearPaymentMessage() {
+  elements.paymentMessage.textContent = "";
+  elements.paymentMessage.className = "payment-message";
+  elements.cashAmount.setAttribute("aria-invalid", "false");
+}
 
-orderLines.addEventListener("click", (event) => {
-  const button = event.target.closest("button[data-action]");
-  if (!button || completedTransaction) return;
-  const { action, productId } = button.dataset;
-  const currentQuantity = cart.get(productId);
-  if (!currentQuantity) return;
-  if (action === "remove" || (action === "decrease" && currentQuantity === 1)) {
-    const product = products.find((item) => item.id === productId);
-    pendingRemoval = { productId, productName: product.name };
-    removeConfirmDetails.textContent = `Remove ${product.name} from this order? Your other items will stay in the cart.`;
-    removeConfirmModal.showModal();
-    return;
-  } else if (action === "decrease") cart.set(productId, currentQuantity - 1);
-  else if (action === "increase") cart.set(productId, currentQuantity + 1);
-  cashAmount.value = "";
-  clearPaymentMessage();
-  renderCart();
-});
+function setPaymentError(message) {
+  elements.paymentMessage.textContent = message;
+  elements.paymentMessage.className = "payment-message error";
+  elements.cashAmount.setAttribute("aria-invalid", "true");
+}
 
-paymentForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  clearPaymentMessage();
-  if (completedTransaction) {
-    paymentMessage.textContent = "This transaction is already complete. Start a new transaction to accept another payment.";
-    paymentMessage.classList.add("error");
-    return;
-  }
-  if (pendingPayment !== null) {
-    paymentMessage.textContent = "A payment is awaiting confirmation. No second payment was started.";
-    paymentMessage.classList.add("error");
-    return;
-  }
-  if (cart.size === 0) {
-    paymentMessage.textContent = "Add at least one item before accepting payment.";
-    paymentMessage.classList.add("error");
-    return;
-  }
-  const entered = cashAmount.value.trim();
-  if (!entered) paymentMessage.textContent = "Enter the cash amount received.";
-  else if (/^-/.test(entered)) paymentMessage.textContent = "Cash received cannot be negative.";
-  else if (!/^\d+(\.\d{1,2})?$/.test(entered)) paymentMessage.textContent = "Enter a valid amount using numbers and up to two decimal places.";
-  else {
-    const paid = Math.round(Number(entered) * 100);
-    if (!Number.isSafeInteger(paid)) paymentMessage.textContent = "Enter a valid cash amount.";
-    else if (paid < 0) paymentMessage.textContent = "Cash received cannot be negative.";
-    else if (paid < getTotal()) {
-      insufficientDetails.textContent = `The order total is ${formatPesos(getTotal())}, but the cash entered is ${formatPesos(paid)}. The order is unchanged. Enter the correct amount and try again.`;
-      insufficientModal.showModal();
-      return;
-    }
-    else {
-      pendingPayment = paid;
-      paymentConfirmDetails.textContent = `Order total: ${formatPesos(getTotal())}. Cash received: ${formatPesos(paid)}. Change: ${formatPesos(paid - getTotal())}.`;
-      paymentConfirmModal.showModal();
-      return;
-    }
-  }
-  paymentMessage.classList.add("error");
-});
+function setProductButtonsDisabled(disabled) {
+  elements.productGrid.querySelectorAll("button[data-action='add']").forEach((button) => {
+    button.disabled = disabled;
+  });
+}
 
-newTransactionButton.addEventListener("click", () => {
-  newTransactionModal.showModal();
-});
-
-document.querySelector("#accept-payment").addEventListener("click", () => {
-  // Guard against a repeated submission while a confirmation is already pending.
-  if (completedTransaction || pendingPayment === null || cart.size === 0) return;
-  const paid = pendingPayment;
-  pendingPayment = null;
-  paymentConfirmModal.close();
-  transactionCount += 1;
+function makeTransactionReference() {
+  transactionState.count += 1;
   const now = new Date();
-  const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-  completedTransaction = {
-    reference: `SB-${datePart}-${String(transactionCount).padStart(3, "0")}`,
+  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  return `SB-${date}-${String(transactionState.count).padStart(3, "0")}`;
+}
+
+function completePayment(paid) {
+  if (transactionState.completed || cart.size === 0) return;
+
+  const total = getCartTotal();
+  transactionState.completed = {
+    reference: makeTransactionReference(),
     items: [...cart].map(([productId, quantity]) => {
-      const product = products.find((item) => item.id === productId);
+      const product = productById.get(productId);
       return { name: product.name, quantity, subtotal: product.price * quantity };
     }),
-    total: getTotal(), paid, change: paid - getTotal(),
+    total,
+    paid,
+    change: paid - total,
   };
-  cashAmount.disabled = true;
-  payButton.disabled = true;
-  newTransactionButton.hidden = false;
-  orderNumber.textContent = completedTransaction.reference;
-  orderNumber.parentElement.setAttribute("aria-label", `Current order ${completedTransaction.reference}`);
-  productGrid.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+  transactionState.pendingPayment = null;
+  elements.paymentConfirmModal.close();
+  elements.newTransactionButton.hidden = false;
+  elements.orderNumber.textContent = transactionState.completed.reference;
+  elements.orderNumber.parentElement.setAttribute("aria-label", `Current order ${transactionState.completed.reference}`);
+  setProductButtonsDisabled(true);
   renderCart();
-  renderReceipt(completedTransaction);
-});
+  renderReceipt(transactionState.completed);
+}
 
-paymentConfirmModal.addEventListener("close", () => { pendingPayment = null; });
-
-document.querySelector("#confirm-remove").addEventListener("click", () => {
-  if (!pendingRemoval) return;
-  cart.delete(pendingRemoval.productId);
-  pendingRemoval = null;
-  cashAmount.value = "";
-  clearPaymentMessage();
-  removeConfirmModal.close();
-  renderCart();
-});
-removeConfirmModal.addEventListener("close", () => { pendingRemoval = null; });
-
-document.querySelector("#close-receipt").addEventListener("click", () => receiptModal.close());
-document.querySelector("#receipt-new-transaction").addEventListener("click", () => {
-  newTransactionModal.showModal();
-});
-document.querySelector("#confirm-new-transaction").addEventListener("click", () => {
+function resetTransaction() {
   cart.clear();
-  completedTransaction = null;
-  cashAmount.value = "";
-  newTransactionButton.hidden = true;
+  transactionState.completed = null;
+  transactionState.pendingPayment = null;
+  transactionState.pendingRemovalId = null;
+  elements.cashAmount.value = "";
+  elements.newTransactionButton.hidden = true;
+  elements.orderNumber.textContent = "New";
+  elements.orderNumber.parentElement.setAttribute("aria-label", "New order");
   clearPaymentMessage();
-  orderNumber.textContent = "New";
-  orderNumber.parentElement.setAttribute("aria-label", "New order");
-  productGrid.replaceChildren();
-  renderProducts();
+  elements.receipt.replaceChildren();
+  elements.newTransactionModal.close();
+  if (elements.receiptModal.open) elements.receiptModal.close();
+  setProductButtonsDisabled(false);
   renderCart();
-  newTransactionModal.close();
-  receipt.replaceChildren();
-  if (receiptModal.open) receiptModal.close();
-});
+  elements.productGrid.querySelector("button[data-action='add']")?.focus();
+}
 
-insufficientModal.addEventListener("close", () => {
-  if (cart.size > 0 && !completedTransaction) cashAmount.focus();
-});
+// -----------------------------------------------------------------------------
+// Event handlers
+// -----------------------------------------------------------------------------
+function handleProductClick(event) {
+  const button = event.target.closest("button[data-action='add']");
+  if (!button || transactionState.completed) return;
 
-renderProducts();
+  const productId = button.dataset.productId;
+  cart.set(productId, (cart.get(productId) || 0) + 1);
+  elements.cashAmount.value = "";
+  clearPaymentMessage();
+  renderCart();
+}
+
+function handleCartClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button || transactionState.completed) return;
+
+  const { action, productId } = button.dataset;
+  const quantity = cart.get(productId);
+  if (!quantity) return;
+
+  if (action === "remove" || (action === "decrease" && quantity === 1)) {
+    const product = productById.get(productId);
+    transactionState.pendingRemovalId = productId;
+    elements.removeConfirmDetails.textContent = `Remove ${product.name} from this order? Your other items will stay in the cart.`;
+    elements.removeConfirmModal.showModal();
+    return;
+  }
+
+  cart.set(productId, action === "decrease" ? quantity - 1 : quantity + 1);
+  elements.cashAmount.value = "";
+  clearPaymentMessage();
+  renderCart();
+}
+
+function handlePaymentSubmit(event) {
+  event.preventDefault();
+  clearPaymentMessage();
+
+  if (transactionState.completed) {
+    setPaymentError("This transaction is already complete. Start a new transaction to accept another payment.");
+    return;
+  }
+  if (transactionState.pendingPayment !== null) {
+    setPaymentError("A payment is awaiting confirmation. No second payment was started.");
+    return;
+  }
+
+  const result = validatePayment(elements.cashAmount.value);
+  if (!result.valid) {
+    if (result.type === "insufficient") {
+      elements.insufficientDetails.textContent = `The order total is ${formatPesos(result.total)}, but the cash entered is ${formatPesos(result.paid)}. The order is unchanged. Enter the correct amount and try again.`;
+      setPaymentError("Cash is below the order total. Update the amount and try again.");
+      elements.insufficientModal.showModal();
+    } else {
+      setPaymentError(result.message);
+    }
+    return;
+  }
+
+  transactionState.pendingPayment = result.paid;
+  elements.paymentConfirmDetails.textContent = `Order total: ${formatPesos(result.total)}. Cash received: ${formatPesos(result.paid)}. Change: ${formatPesos(result.paid - result.total)}.`;
+  elements.paymentConfirmModal.showModal();
+}
+
+function confirmItemRemoval() {
+  const productId = transactionState.pendingRemovalId;
+  if (!productId || !cart.has(productId)) return;
+
+  cart.delete(productId);
+  transactionState.pendingRemovalId = null;
+  elements.cashAmount.value = "";
+  clearPaymentMessage();
+  elements.removeConfirmModal.close();
+  renderCart();
+}
+
+function initializeStaticIcons() {
+  elements.welcomeCopy.textContent = "Choose from today's snack bar favorites.";
+  elements.cashCurrency.textContent = "\u20B1";
+  elements.bagIcon.replaceChildren(createIcon("basket", 18));
+  elements.emptyIcon.replaceChildren(createIcon("cart", 23));
+  elements.payButton.querySelector("span").replaceChildren(createIcon("arrow", 17));
+}
+
+function registerEventHandlers() {
+  elements.productGrid.addEventListener("click", handleProductClick);
+  elements.orderLines.addEventListener("click", handleCartClick);
+  elements.paymentForm.addEventListener("submit", handlePaymentSubmit);
+  elements.cashAmount.addEventListener("input", clearPaymentMessage);
+  elements.acceptPayment.addEventListener("click", () => {
+    if (transactionState.pendingPayment === null) return;
+    completePayment(transactionState.pendingPayment);
+  });
+  elements.paymentConfirmModal.addEventListener("close", () => {
+    transactionState.pendingPayment = null;
+  });
+  elements.confirmRemove.addEventListener("click", confirmItemRemoval);
+  elements.removeConfirmModal.addEventListener("close", () => {
+    transactionState.pendingRemovalId = null;
+  });
+  elements.closeReceipt.addEventListener("click", () => elements.receiptModal.close());
+  elements.receiptNewTransaction.addEventListener("click", () => elements.newTransactionModal.showModal());
+  elements.newTransactionButton.addEventListener("click", () => elements.newTransactionModal.showModal());
+  elements.confirmNewTransaction.addEventListener("click", resetTransaction);
+  elements.insufficientModal.addEventListener("close", () => {
+    if (cart.size > 0 && !transactionState.completed) elements.cashAmount.focus();
+  });
+}
+
+initializeStaticIcons();
+registerEventHandlers();
+renderProductCatalog();
 renderCart();
