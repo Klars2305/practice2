@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f7f2" />
+    <title>Campus Snack Bar | Point of Sale</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#main" aria-label="Campus Snack Bar home">
+        <span class="brand-mark" aria-hidden="true">SB</span>
+        <span>Campus Snack Bar</span>
+      </a>
+      <span class="service-label"><span class="status-dot" aria-hidden="true"></span> Counter service</span>
+    </header>
+
+    <main id="main" class="page-shell">
+      <section class="welcome" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">POINT OF SALE</p>
+          <h1 id="page-title">Good day. What would you like?</h1>
+          <p class="welcome-copy">Choose from today’s snack bar favorites.</p>
+        </div>
+        <div class="order-number" aria-label="New order">
+          <span class="order-number-label">CURRENT ORDER</span>
+          <strong>New</strong>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="catalog" aria-labelledby="catalog-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">THE MENU</p>
+              <h2 id="catalog-title">Popular picks</h2>
+            </div>
+            <span class="item-count" id="product-count"></span>
+          </div>
+          <div class="product-grid" id="product-grid" aria-live="polite"></div>
+        </section>
+
+        <aside class="order-panel" aria-labelledby="order-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">YOUR ORDER</p>
+              <h2 id="order-title">Order summary</h2>
+            </div>
+            <span class="bag-icon" aria-hidden="true">＋</span>
+          </div>
+
+          <div class="empty-order" id="empty-order">
+            <span class="empty-icon" aria-hidden="true">⌑</span>
+            <p class="empty-title">Your order is empty</p>
+            <p class="empty-copy">Add an item from the menu to get started.</p>
+          </div>
+
+          <div class="order-lines" id="order-lines" aria-live="polite" hidden></div>
+
+          <div class="summary-total">
+            <span>Total</span>
+            <strong id="order-total" aria-live="polite">₱0.00</strong>
+          </div>
+
+          <form class="payment-form" id="payment-form" aria-label="Cash payment" novalidate>
+            <label for="cash-amount">Cash received</label>
+            <div class="cash-input-wrap">
+              <span aria-hidden="true">₱</span>
+              <input id="cash-amount" name="cash-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" disabled aria-describedby="payment-message" />
+            </div>
+            <button class="pay-button" id="pay-button" type="submit" disabled>Confirm payment <span aria-hidden="true">→</span></button>
+            <p class="payment-message" id="payment-message" role="alert" aria-live="polite"></p>
+          </form>
+          <button class="new-transaction-button" id="new-transaction" type="button" hidden>Start new transaction</button>
+        </aside>
+      </div>
+
+      <dialog class="app-modal" id="payment-confirm-modal" aria-labelledby="payment-confirm-title">
+        <form method="dialog" class="modal-content">
+          <p class="eyebrow">PAYMENT REVIEW</p>
+          <h2 id="payment-confirm-title">Confirm this payment?</h2>
+          <p id="payment-confirm-details"></p>
+          <div class="modal-actions">
+            <button class="secondary-button" value="cancel" autofocus>Go back</button>
+            <button class="pay-button" id="accept-payment" type="button">Accept payment</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog class="app-modal" id="insufficient-modal" aria-labelledby="insufficient-title">
+        <form method="dialog" class="modal-content">
+          <p class="eyebrow">PAYMENT NOT COMPLETE</p>
+          <h2 id="insufficient-title">Cash is insufficient</h2>
+          <p id="insufficient-details"></p>
+          <div class="modal-actions"><button class="pay-button" value="ok" autofocus>Review cash amount</button></div>
+        </form>
+      </dialog>
+      <dialog class="app-modal" id="remove-confirm-modal" aria-labelledby="remove-confirm-title">
+        <form method="dialog" class="modal-content">
+          <p class="eyebrow">ORDER CHANGE</p>
+          <h2 id="remove-confirm-title">Remove this item?</h2>
+          <p id="remove-confirm-details"></p>
+          <div class="modal-actions">
+            <button class="secondary-button" value="cancel" autofocus>Keep item</button>
+            <button class="danger-button" id="confirm-remove" type="button">Remove item</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog class="app-modal receipt-modal" id="receipt-modal" aria-labelledby="receipt-modal-title">
+        <div class="modal-content">
+          <h2 id="receipt-modal-title" class="visually-hidden">Digital receipt</h2>
+          <section class="receipt" id="receipt" aria-live="polite"></section>
+          <div class="modal-actions">
+            <button class="secondary-button" id="close-receipt" type="button">Close receipt</button>
+            <button class="pay-button" id="receipt-new-transaction" type="button">Start new transaction</button>
+          </div>
+        </div>
+      </dialog>
+      <dialog class="app-modal" id="new-transaction-modal" aria-labelledby="new-transaction-title">
+        <form method="dialog" class="modal-content">
+          <p class="eyebrow">NEW TRANSACTION</p>
+          <h2 id="new-transaction-title">Clear this order?</h2>
+          <p>The current cart, payment, and receipt will be cleared.</p>
+          <div class="modal-actions">
+            <button class="secondary-button" value="cancel" autofocus>Keep current order</button>
+            <button class="danger-button" id="confirm-new-transaction" type="button">Clear and start new</button>
+          </div>
+        </form>
+      </dialog>
+
+      <footer class="page-footer">
+        <span>Campus Snack Bar</span>
+        <span>Fresh snacks, ready for your break.</span>
+      </footer>
+    </main>
+  </body>
+</html>
