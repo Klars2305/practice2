@@ -6,6 +6,8 @@ A desktop-friendly point-of-sale app for the IT 415 Campus Snack Bar practical e
 
 The app uses native keyboard-accessible dialogs for payment review, insufficient payment, remove confirmation, the receipt, and new-transaction confirmation. Invalid input gives a clear message; cancelled dialogs preserve the current order. Cash remains calculated in integer centavos.
 
+The interface uses a layered glass surface, a soft ambient background, a modern system typography stack, accessible focus states, and locally rendered SVG food and action icons. Icons and fonts do not require a network connection.
+
 ## Run
 
 Open `index.html` in a current desktop browser. No installation, server, or build step is required.

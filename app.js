@@ -1,13 +1,46 @@
 // The menu, cart, and completed transaction stay in memory for this browser session.
 // Prices use integer centavos so calculations remain exact.
 const products = [
-  { id: "classic-burger", name: "Classic Burger", category: "BURGERS", price: 5500, icon: "\u{1F354}", tone: "peach" },
-  { id: "cheeseburger", name: "Cheeseburger", category: "BURGERS", price: 6500, icon: "\u{1F354}", tone: "gold" },
-  { id: "ham-sandwich", name: "Ham Sandwich", category: "SANDWICHES", price: 4000, icon: "\u{1F96A}", tone: "sage" },
-  { id: "regular-fries", name: "French Fries (Regular)", category: "SIDES", price: 4500, icon: "\u{1F35F}", tone: "coral" },
-  { id: "nachos", name: "Nachos", category: "SIDES", price: 5000, icon: "\u{1F9C0}", tone: "cream" },
-  { id: "soda-can", name: "Soda (Can)", category: "DRINKS", price: 2500, icon: "\u{1F964}", tone: "blue" },
+  { id: "classic-burger", name: "Classic Burger", category: "BURGERS", price: 5500, icon: "burger", tone: "peach" },
+  { id: "cheeseburger", name: "Cheeseburger", category: "BURGERS", price: 6500, icon: "cheeseburger", tone: "gold" },
+  { id: "ham-sandwich", name: "Ham Sandwich", category: "SANDWICHES", price: 4000, icon: "sandwich", tone: "sage" },
+  { id: "regular-fries", name: "French Fries (Regular)", category: "SIDES", price: 4500, icon: "fries", tone: "coral" },
+  { id: "nachos", name: "Nachos", category: "SIDES", price: 5000, icon: "nachos", tone: "cream" },
+  { id: "soda-can", name: "Soda (Can)", category: "DRINKS", price: 2500, icon: "soda", tone: "blue" },
 ];
+
+// Local, Lucide-style SVGs keep familiar icons available without a network dependency.
+const iconShapes = {
+  burger: '<path d="M4 11a8 6 0 0 1 16 0"/><path d="M3.5 12h17l-1 3h-15l-1-3Z"/><path d="M5 16h14l-1 4H6l-1-4Z"/><path d="M8 8h.01M12 6.8h.01M16 8h.01"/>',
+  cheeseburger: '<path d="M4 11a8 6 0 0 1 16 0"/><path d="M3.5 12h17l-1 3h-15l-1-3Z"/><path d="m7 15 3 4 2-2 2 2 3-4"/><path d="M8 8h.01M12 6.8h.01M16 8h.01"/>',
+  sandwich: '<path d="m4 8 8-4 8 4v2H4V8Z"/><path d="M4 12h16l-2 8H6l-2-8Z"/><path d="m7 12 2 3 2-2 2 2 2-3"/>',
+  fries: '<path d="m6 10 2-7 2 7 2-8 2 8 2-6 2 6"/><path d="m5 11 2 10h10l2-10H5Z"/><path d="M8 15h8"/>',
+  nachos: '<path d="m4 17 5-10 5 10H4Z"/><path d="m11 18 5-12 5 12h-10Z"/><path d="m8 15 2 2M15 14l2 2"/>',
+  soda: '<path d="M8 4h8l1 17H7L8 4Z"/><path d="M9 4V2h5l2 3M8 9h8M9 17h6"/>',
+  bag: '<path d="M5 8h14l1 13H4L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  cart: '<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 8H5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/>',
+  arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+  basket: '<path d="m3 10 2 11h14l2-11H3Z"/><path d="m7 10 5-7 5 7M8 14v3m4-3v3m4-3v3"/>',
+};
+
+function createIcon(name, size = 20) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  svg.innerHTML = iconShapes[name] || iconShapes.bag;
+  return svg;
+}
 
 const productGrid = document.querySelector("#product-grid");
 const productCount = document.querySelector("#product-count");
@@ -29,6 +62,11 @@ const removeConfirmModal = document.querySelector("#remove-confirm-modal");
 const removeConfirmDetails = document.querySelector("#remove-confirm-details");
 const newTransactionModal = document.querySelector("#new-transaction-modal");
 const receiptModal = document.querySelector("#receipt-modal");
+document.querySelector(".welcome-copy").textContent = "Choose from today's snack bar favorites.";
+document.querySelector(".cash-input-wrap > span").textContent = "\u20B1";
+document.querySelector(".bag-icon").replaceChildren(createIcon("basket", 18));
+document.querySelector(".empty-icon").replaceChildren(createIcon("cart", 23));
+payButton.querySelector("span").replaceChildren(createIcon("arrow", 17));
 let pendingRemoval = null;
 let pendingPayment = null;
 const cart = new Map();
@@ -47,7 +85,7 @@ function renderProducts() {
     const visual = document.createElement("div");
     visual.className = `product-visual ${product.tone}`;
     visual.setAttribute("aria-hidden", "true");
-    visual.textContent = product.icon;
+    visual.append(createIcon(product.icon, 54));
     const details = document.createElement("div");
     details.className = "product-details";
     const category = document.createElement("p");
@@ -68,9 +106,8 @@ function renderProducts() {
     addButton.dataset.productId = product.id;
     addButton.setAttribute("aria-label", `Add ${product.name} to order`);
     addButton.disabled = Boolean(completedTransaction);
-    const plus = document.createElement("span");
-    plus.setAttribute("aria-hidden", "true");
-    plus.textContent = "+";
+    const plus = createIcon("plus", 15);
+    plus.classList.add("button-icon");
     addButton.append(plus, document.createTextNode(" Add"));
     bottom.append(price, addButton);
     details.append(category, name, bottom);
@@ -86,7 +123,11 @@ function createCartButton(action, label, product) {
   button.dataset.action = action;
   button.dataset.productId = product.id;
   button.setAttribute("aria-label", label);
-  button.textContent = action === "increase" ? "+" : action === "decrease" ? "\u2212" : "Remove";
+  if (action === "remove") {
+    button.append(createIcon("trash", 14), document.createTextNode(" Remove"));
+  } else {
+    button.append(createIcon(action === "increase" ? "plus" : "minus", 15));
+  }
   button.disabled = Boolean(completedTransaction);
   return button;
 }
@@ -218,7 +259,11 @@ paymentForm.addEventListener("submit", (event) => {
     paymentMessage.classList.add("error");
     return;
   }
-  if (pendingPayment !== null) return;
+  if (pendingPayment !== null) {
+    paymentMessage.textContent = "A payment is awaiting confirmation. No second payment was started.";
+    paymentMessage.classList.add("error");
+    return;
+  }
   if (cart.size === 0) {
     paymentMessage.textContent = "Add at least one item before accepting payment.";
     paymentMessage.classList.add("error");
@@ -293,13 +338,13 @@ removeConfirmModal.addEventListener("close", () => { pendingRemoval = null; });
 
 document.querySelector("#close-receipt").addEventListener("click", () => receiptModal.close());
 document.querySelector("#receipt-new-transaction").addEventListener("click", () => {
-  receiptModal.close();
   newTransactionModal.showModal();
 });
 document.querySelector("#confirm-new-transaction").addEventListener("click", () => {
   cart.clear();
   completedTransaction = null;
   cashAmount.value = "";
+  newTransactionButton.hidden = true;
   clearPaymentMessage();
   orderNumber.textContent = "New";
   orderNumber.parentElement.setAttribute("aria-label", "New order");
@@ -307,6 +352,12 @@ document.querySelector("#confirm-new-transaction").addEventListener("click", () 
   renderProducts();
   renderCart();
   newTransactionModal.close();
+  receipt.replaceChildren();
+  if (receiptModal.open) receiptModal.close();
+});
+
+insufficientModal.addEventListener("close", () => {
+  if (cart.size > 0 && !completedTransaction) cashAmount.focus();
 });
 
 renderProducts();
